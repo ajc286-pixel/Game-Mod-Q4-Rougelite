@@ -110,7 +110,7 @@ const char *idMat2::ToString( int precision ) const {
 
 idMat3 mat3_zero( idVec3( 0, 0, 0 ), idVec3( 0, 0, 0 ), idVec3( 0, 0, 0 ) );
 idMat3 mat3_identity( idVec3( 1, 0, 0 ), idVec3( 0, 1, 0 ), idVec3( 0, 0, 1 ) );
-
+idMat3 mat3_ones(idVec3(1, 1, 1), idVec3(1, 1, 1), idVec3(1, 1, 1));
 /*
 ============
 idMat3::ToAngles
