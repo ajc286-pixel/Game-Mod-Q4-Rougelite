@@ -495,6 +495,7 @@ public:
 	idPhysics_Monster		physicsObj;
 	
 	// weapon/attack vars
+	bool					droppedItem;
 	bool					lastHitCheckResult;
 	int						lastHitCheckTime;
 	int						lastAttackTime;

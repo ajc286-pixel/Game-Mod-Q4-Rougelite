@@ -330,36 +330,36 @@ rvWeaponBlaster::State_Charge
 ================
 */
 stateResult_t rvWeaponBlaster::State_Charge ( const stateParms_t& parms ) {
-	enum {
-		CHARGE_INIT,
-		CHARGE_WAIT,
-	};	
-	switch ( parms.stage ) {
-		case CHARGE_INIT:
-			viewModel->SetShaderParm ( BLASTER_SPARM_CHARGEGLOW, chargeGlow[0] );
-			StartSound ( "snd_charge", SND_CHANNEL_ITEM, 0, false, NULL );
-			PlayCycle( ANIMCHANNEL_ALL, "charging", parms.blendFrames );
-			return SRESULT_STAGE ( CHARGE_WAIT );
-			
-		case CHARGE_WAIT:	
-			if ( gameLocal.time - fireHeldTime < chargeTime ) {
-				float f;
-				f = (float)(gameLocal.time - fireHeldTime) / (float)chargeTime;
-				f = chargeGlow[0] + f * (chargeGlow[1] - chargeGlow[0]);
-				f = idMath::ClampFloat ( chargeGlow[0], chargeGlow[1], f );
-				viewModel->SetShaderParm ( BLASTER_SPARM_CHARGEGLOW, f );
-				
-				if ( !wsfl.attack ) {
+//	enum {
+//		CHARGE_INIT,
+//		CHARGE_WAIT,
+//	};	
+//	switch ( parms.stage ) {
+//		case CHARGE_INIT:
+//			viewModel->SetShaderParm ( BLASTER_SPARM_CHARGEGLOW, chargeGlow[0] );
+//			StartSound ( "snd_charge", SND_CHANNEL_ITEM, 0, false, NULL );
+//			PlayCycle( ANIMCHANNEL_ALL, "charging", parms.blendFrames );
+//			return SRESULT_STAGE ( CHARGE_WAIT );
+//			
+//		case CHARGE_WAIT:	
+//			if ( gameLocal.time - fireHeldTime < chargeTime ) {
+//				float f;
+//				f = (float)(gameLocal.time - fireHeldTime) / (float)chargeTime;
+//				f = chargeGlow[0] + f * (chargeGlow[1] - chargeGlow[0]);
+//				f = idMath::ClampFloat ( chargeGlow[0], chargeGlow[1], f );
+//				viewModel->SetShaderParm ( BLASTER_SPARM_CHARGEGLOW, f );
+//				
+//				if ( !wsfl.attack ) {
 					SetState ( "Fire", 0 );
 					return SRESULT_DONE;
-				}
-				
-				return SRESULT_WAIT;
-			} 
-			SetState ( "Charged", 4 );
-			return SRESULT_DONE;
-	}
-	return SRESULT_ERROR;	
+//				}
+//				
+//				return SRESULT_WAIT;
+//			} 
+//			SetState ( "Charged", 4 );
+//			return SRESULT_DONE;
+//	}
+//	return SRESULT_ERROR;	
 }
 
 /*
@@ -368,28 +368,28 @@ rvWeaponBlaster::State_Charged
 ================
 */
 stateResult_t rvWeaponBlaster::State_Charged ( const stateParms_t& parms ) {
-	enum {
-		CHARGED_INIT,
-		CHARGED_WAIT,
-	};	
-	switch ( parms.stage ) {
-		case CHARGED_INIT:		
-			viewModel->SetShaderParm ( BLASTER_SPARM_CHARGEGLOW, 1.0f  );
-
-			StopSound ( SND_CHANNEL_ITEM, false );
-			StartSound ( "snd_charge_loop", SND_CHANNEL_ITEM, 0, false, NULL );
-			StartSound ( "snd_charge_click", SND_CHANNEL_BODY, 0, false, NULL );
-			return SRESULT_STAGE(CHARGED_WAIT);
-			
-		case CHARGED_WAIT:
-			if ( !wsfl.attack ) {
+//	enum {
+//		CHARGED_INIT,
+//		CHARGED_WAIT,
+//	};	
+//	switch ( parms.stage ) {
+//		case CHARGED_INIT:		
+//			viewModel->SetShaderParm ( BLASTER_SPARM_CHARGEGLOW, 1.0f  );
+//
+//			StopSound ( SND_CHANNEL_ITEM, false );
+//			StartSound ( "snd_charge_loop", SND_CHANNEL_ITEM, 0, false, NULL );
+//			StartSound ( "snd_charge_click", SND_CHANNEL_BODY, 0, false, NULL );
+//			return SRESULT_STAGE(CHARGED_WAIT);
+//			
+//		case CHARGED_WAIT:
+//			if ( !wsfl.attack ) {
 				fireForced = true;
 				SetState ( "Fire", 0 );
 				return SRESULT_DONE;
-			}
-			return SRESULT_WAIT;
-	}
-	return SRESULT_ERROR;
+//			}
+//			return SRESULT_WAIT;
+//	}
+//	return SRESULT_ERROR;
 }
 
 /*
@@ -423,18 +423,10 @@ stateResult_t rvWeaponBlaster::State_Fire ( const stateParms_t& parms ) {
 				SetState ( "Idle", 4 );
 				return SRESULT_DONE;
 			}
+			Attack ( true, owner->inventory.shotCount, spread, 0, 1.0f );
+			PlayEffect ( "fx_normalflash", barrelJointView, false );
+			PlayAnim( ANIMCHANNEL_ALL, "fire", parms.blendFrames );
 
-
-	
-			if ( gameLocal.time - fireHeldTime > chargeTime ) {	
-				Attack ( true, 1, spread, 0, 1.0f );
-				PlayEffect ( "fx_chargedflash", barrelJointView, false );
-				PlayAnim( ANIMCHANNEL_ALL, "chargedfire", parms.blendFrames );
-			} else {
-				Attack ( false, 1, spread, 0, 1.0f );
-				PlayEffect ( "fx_normalflash", barrelJointView, false );
-				PlayAnim( ANIMCHANNEL_ALL, "fire", parms.blendFrames );
-			}
 			fireHeldTime = 0;
 			
 			return SRESULT_STAGE(FIRE_WAIT);

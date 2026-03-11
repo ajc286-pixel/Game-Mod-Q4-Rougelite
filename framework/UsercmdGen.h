@@ -36,6 +36,7 @@ const int BUTTON_VOICECHAT		= BIT(6);
 const int BUTTON_TOURNEY		= BIT(7);
 // twhitaker: strafe
 const int BUTTON_STRAFE			= BIT(8);
+
 // RAVEN END
 
 
@@ -65,7 +66,7 @@ const int IMPULSE_21			= 21;			// tourney toggle waiting room/spec
 const int IMPULSE_22			= 22;			// spectate
 const int IMPULSE_23			= 23;			// <unused>
 const int IMPULSE_24			= 24;			// <unused>
-const int IMPULSE_25			= 25;			// <unused>
+const int IMPULSE_25			= 25;			// buy menu
 const int IMPULSE_26			= 26;			// <unused>
 const int IMPULSE_27			= 27;			// <unused>
 const int IMPULSE_28			= 28;			// vote yes
@@ -126,7 +127,6 @@ const int IMPULSE_127			= 127;			// UNUSED
 
 
 const int KEY_MOVESPEED			= 127;
-
 // usercmd_t->flags
 const int UCF_IMPULSE_SEQUENCE	= 0x0001;		// toggled every time an impulse command is sent
 

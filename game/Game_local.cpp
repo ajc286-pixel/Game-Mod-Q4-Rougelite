@@ -275,7 +275,6 @@ void idGameLocal::Clear( void ) {
 // mwhitlock: Dynamic memory consolidation
 	clip.Clear();
 // RAVEN END
-	
 	for ( i = 0; i < MAX_CLIENTS; i++ ) {
 		clientsPVS[ i ].i = -1;
 		clientsPVS[ i ].h = -1;
@@ -2923,6 +2922,15 @@ void idGameLocal::SpawnPlayer( int clientNum ) {
 // RAVEN BEGIN
 // bdube: changed marine class
 	args.Set( "classname", idPlayer::GetSpawnClassname() );
+	if (g_skill.GetInteger() == 0) {
+		args.Set("classname", "player_issac");
+	}
+	if (g_skill.GetInteger() == 1) {
+		args.Set("classname", "player_maggie");
+	}
+	if (g_skill.GetInteger() == 2) {
+		args.Set("classname", "player_judas");
+	}
 // RAVEN END
 	
 	// This takes a really long time.

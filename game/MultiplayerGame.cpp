@@ -3503,7 +3503,6 @@ void idMultiplayerGame::SetupBuyMenuItems()
 	buyMenu->SetStateInt( "buyStatus_special0", player->ItemBuyStatus( "ammo_regen" ) );
 	buyMenu->SetStateInt( "buyStatus_special1", player->ItemBuyStatus( "health_regen" ) );
 	buyMenu->SetStateInt( "buyStatus_special2", player->ItemBuyStatus( "damage_boost" ) );
-
 	buyMenu->SetStateInt( "playerTeam", player->team );
 
 	if ( player->weapon )
@@ -3732,6 +3731,16 @@ idUserInterface* idMultiplayerGame::StartMenu( void ) {
 			buyMenu->SetStateInt( "price_special0", player->GetItemCost( "ammo_regen" ) );
 			buyMenu->SetStateInt( "price_special1", player->GetItemCost( "health_regen" ) );
 			buyMenu->SetStateInt( "price_special2", player->GetItemCost( "damage_boost" ) );
+
+			buyMenu->SetStateInt("price_spoon_bender", 10);
+			buyMenu->SetStateInt("price_twenty_twenty", 15);
+			buyMenu->SetStateInt("price_monstrance", 5);
+			buyMenu->SetStateInt("price_mutant_spider", 20);
+			buyMenu->SetStateInt("price_pyromaniac", 20);
+			buyMenu->SetStateInt("price_lunch", 5);
+			buyMenu->SetStateInt("price_the_belt", 5);
+			buyMenu->SetStateInt("price_mantle", 5);
+			buyMenu->SetStateInt("price_curse_of_the_tower", 1);
 			SetupBuyMenuItems();
 			buyMenu->Activate(true, gameLocal.time);
 			return buyMenu;
@@ -9118,7 +9127,7 @@ idMultiplayerGame::IsBuyingAllowedInTheCurrentGameMode
 */
 bool idMultiplayerGame::IsBuyingAllowedInTheCurrentGameMode( void ) {
 	if ( !gameLocal.isMultiplayer ) {
-		return false;
+		return true;
 	}
 
 	if ( gameLocal.gameType != GAME_TOURNEY ) {

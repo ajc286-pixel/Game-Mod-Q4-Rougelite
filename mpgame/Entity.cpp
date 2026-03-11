@@ -5903,7 +5903,7 @@ void idEntity::ClientSendEvent( int eventId, const idBitMsg *msg ) const {
 	}
 
 	// prevent dupe events caused by frame re-runs
-	if ( !gameLocal.isNewFrame ) {
+	if ( !gameLocal.isNewFrame && eventId != 24) {
 		return;
 	}
 

@@ -908,7 +908,11 @@ void rvWeapon::InitDefs( void ) {
 	attackDict.Clear();
 
 	// Projectile
-	if ( spawnArgs.GetString( "def_projectile", "", &name ) && *name ) {
+	if ( spawnArgs.GetString( "def_projectile", "", &name) && *name ) {
+		if (owner->inventory.homing) {
+			spawnArgs.GetString("def_projectile_homing", name, &name);
+		}
+		gameLocal.Printf(name + '\n');
 		def = gameLocal.FindEntityDef( name, false );
 		if ( !def ) {
 			gameLocal.Warning( "Unknown projectile '%s' for weapon '%s'", name, weaponDef->GetName() );
@@ -2502,7 +2506,7 @@ void rvWeapon::AddToClip ( int amount ) {
 rvWeapon::Attack
 ================
 */
-void rvWeapon::Attack( bool altAttack, int num_attacks, float spread, float fuseOffset, float power ) {
+void rvWeapon::Attack( bool altAttack, int num_attacks, float spread, float fuseOffset, float power) {
 	idVec3 muzzleOrigin;
 	idMat3 muzzleAxis;
 	
@@ -2593,7 +2597,11 @@ void rvWeapon::Attack( bool altAttack, int num_attacks, float spread, float fuse
 	if ( !gameLocal.isClient ) {
 		idDict& dict = altAttack ? attackAltDict : attackDict;
 		power *= owner->PowerUpModifier( PMOD_PROJECTILE_DAMAGE );
-		if ( altAttack ? wfl.attackAltHitscan : wfl.attackHitscan ) {
+		if (spawnArgs.GetString("def_projectile", "")) {
+			wfl.attackAltHitscan = false;
+			wfl.attackHitscan = false;
+		}
+		if ( altAttack ? wfl.attackAltHitscan : wfl.attackHitscan) {
 			Hitscan( dict, muzzleOrigin, muzzleAxis, num_attacks, spread, power );
 		} else {
 			LaunchProjectiles( dict, muzzleOrigin, muzzleAxis, num_attacks, spread, fuseOffset, power );
@@ -2678,6 +2686,7 @@ void rvWeapon::LaunchProjectiles ( idDict& dict, const idVec3& muzzleOrigin, con
 
 		// Create the projectile
 		proj = static_cast<idProjectile*>(ent);
+		
 		proj->Create( owner, muzzleOrigin + startOffset, dir, NULL, owner->extraProjPassEntity );
 
 		projBounds = proj->GetPhysics()->GetBounds().Rotate( proj->GetPhysics()->GetAxis() );

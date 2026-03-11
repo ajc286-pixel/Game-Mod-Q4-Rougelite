@@ -28,7 +28,7 @@
 #endif
 // RAVEN END
 
-
+//class rvWeaponGrenadeLauncher;
 
 
 idCVar net_predictionErrorDecay( "net_predictionErrorDecay", "112", CVAR_FLOAT | CVAR_GAME | CVAR_NOCHEAT, "time in milliseconds it takes to fade away prediction errors", 0.0f, 200.0f );
@@ -65,6 +65,10 @@ const float	PLAYER_ITEM_DROP_SPEED	= 100.0f;
 // how many units to raise spectator above default view height so it's in the head of someone
 const int SPECTATE_RAISE = 25;
 
+int mantleBreakTime = 0;
+
+int inBuyZone = false;
+
 const int	HEALTH_PULSE		= 1000;			// Regen rate and heal leak rate (for health > 100)
 const int	ARMOR_PULSE			= 1000;			// armor ticking down due to being higher than maxarmor
 const int	AMMO_REGEN_PULSE	= 1000;			// ammo regen in Arena CTF
@@ -78,7 +82,7 @@ const int	RAGDOLL_DEATH_TIME	= 3000;
 	const int	MAX_RESPAWN_TIME_XEN_SP	= 3000;
 #endif
 const int	STEPUP_TIME			= 200;
-const int	MAX_INVENTORY_ITEMS = 20;
+const int	MAX_INVENTORY_ITEMS = 100;
 
 const int	ARENA_POWERUP_MASK = ( 1 << POWERUP_AMMOREGEN ) | ( 1 << POWERUP_GUARD ) | ( 1 << POWERUP_DOUBLER ) | ( 1 << POWERUP_SCOUT );
 
@@ -1104,6 +1108,7 @@ idPlayer::idPlayer() {
 
 	weapon					= NULL;
 
+	buymenu					= NULL;
 	hud						= NULL;
 	mphud					= NULL;
 	objectiveSystem			= NULL;
@@ -1838,6 +1843,7 @@ void idPlayer::Spawn( void ) {
 	if ( !gameLocal.isMultiplayer || entityNumber == gameLocal.localClientNum ) {
 		
 		// load HUD
+		buymenu = NULL;
 		hud = NULL;
 		mphud = NULL;
  		
@@ -1850,6 +1856,16 @@ void idPlayer::Spawn( void ) {
 			hud = uiManager->FindGui( temp, true, false, true );
 		} else {
 			gameLocal.Warning( "idPlayer::Spawn() - No hud for player." );
+		}
+
+		if (spawnArgs.GetString("buymenu", "", temp)) {
+			gameLocal.Printf("loaded buymenu\n");
+			buymenu = uiManager->FindGui(temp, true, false, true);
+			gameLocal.Printf("loaded buymenu: %s\n", buymenu->Name());
+		}
+		else {
+			gameLocal.Printf("failed to load buymenu\n");
+			gameLocal.Warning("idPlayer::Spawn() - No hud for player.");
 		}
 
 		if ( gameLocal.isMultiplayer ) {
@@ -3647,7 +3663,6 @@ void idPlayer::DrawHUD( idUserInterface *_hud ) {
 	if ( disableHud || influenceActive != INFLUENCE_NONE || privateCameraView || !_hud || !g_showHud.GetBool() ) {
 		return;
 	}
-
 	if ( objectiveSystemOpen ) {
 		if ( !GuiActive() ) {
 			// showing weapon zoom gui when objectives are open because that's the way I'z told to make it werkz
@@ -3752,7 +3767,9 @@ void idPlayer::DrawHUD( idUserInterface *_hud ) {
 				// TODO: Find a way to get bracket text from gui to hud
 			}
 		}		
-	 	_hud->Redraw( gameLocal.realClientTime );
+		buymenu->Redraw(gameLocal.time);
+
+		_hud->Redraw(gameLocal.realClientTime);
 	}
 
 	if ( gameLocal.isMultiplayer ) {
@@ -4163,27 +4180,27 @@ idPlayer::GiveItem
 Returns false if the item shouldn't be picked up
 ===============
 */
-bool idPlayer::GiveItem( idItem *item ) {
+bool idPlayer::GiveItem(idItem* item) {
 	int					i;
-	const idKeyValue	*arg;
+	const idKeyValue* arg;
 	idDict				attr;
 	bool				gave;
-	
-	bool dropped = item->spawnArgs.GetBool( "dropped" );
 
-	if ( gameLocal.isMultiplayer && spectating ) {
+	bool dropped = item->spawnArgs.GetBool("dropped");
+
+	if (gameLocal.isMultiplayer && spectating) {
 		return false;
 	}
 
-	item->GetAttributes( attr );
+	item->GetAttributes(attr);
 
-	if( gameLocal.isServer || !gameLocal.isMultiplayer ) {
+	if (gameLocal.isServer || !gameLocal.isMultiplayer) {
 		gave = false;
 		bool skipWeaponKey = false;
 		bool skipRestOfKeys = false;
-		if ( gameLocal.IsMultiplayer() ) {
-			dropped = item->spawnArgs.GetBool( "dropped" );
-			if ( item->spawnArgs.FindKey( "weaponclass" ) ) {
+		if (gameLocal.IsMultiplayer()) {
+			dropped = item->spawnArgs.GetBool("dropped");
+			if (item->spawnArgs.FindKey("weaponclass")) {
 				//this is really fucking lame, but
 				//this is the only way we know we're trying
 				//to pick up a weapon before we blindly start
@@ -4191,27 +4208,28 @@ bool idPlayer::GiveItem( idItem *item ) {
 				//whatever order they're in below.  We need
 				//to not process any at all if we're not allowed
 				//to pick up the weapon in the first place!
-				arg = attr.FindKey( "weapon" );
-				if ( arg ) {
+				arg = attr.FindKey("weapon");
+				if (arg) {
 					skipWeaponKey = true;
-					if ( Give( arg->GetKey(), arg->GetValue(), dropped ) ) {
+					if (Give(arg->GetKey(), arg->GetValue(), dropped)) {
 						gave = true;
-					} else if ( !dropped//not a dropped weapon
-						&& gameLocal.IsWeaponsStayOn() ) {
+					}
+					else if (!dropped//not a dropped weapon
+						&& gameLocal.IsWeaponsStayOn()) {
 						//if failed to give weapon, don't give anything else with the weapon
 						skipRestOfKeys = true;
 					}
 				}
 			}
 		}
-		if ( !skipRestOfKeys ) {
-			for( i = 0; i < attr.GetNumKeyVals(); i++ ) {
-				arg = attr.GetKeyVal( i );
-				if ( skipWeaponKey && arg->GetKey() == "weapon" ) {
+		if (!skipRestOfKeys) {
+			for (i = 0; i < attr.GetNumKeyVals(); i++) {
+				arg = attr.GetKeyVal(i);
+				if (skipWeaponKey && arg->GetKey() == "weapon") {
 					//already processed this above
 					continue;
 				}
-				if ( Give( arg->GetKey(), arg->GetValue(), dropped ) ) {
+				if (Give(arg->GetKey(), arg->GetValue(), dropped)) {
 					gave = true;
 				}
 			}
@@ -4222,52 +4240,54 @@ bool idPlayer::GiveItem( idItem *item ) {
 		// display the inv_name on the hud
 		// since idItemPowerup::GiveToPlayer() handles whether or not a player gets a powerup,
 		// we can override gave here for powerups
-		if ( !gave && !item->IsType( idItemPowerup::GetClassType() ) ) {
+		if (!gave && !item->IsType(idItemPowerup::GetClassType())) {
 			return false;
 		}
-	} else {
+	}
+	else {
 		gave = true;
 	}
 
-	arg = item->spawnArgs.MatchPrefix( "inv_ammo_", NULL );
-	if ( arg && hud ) {
-		hud->HandleNamedEvent( "ammoPulse" );
+	arg = item->spawnArgs.MatchPrefix("inv_ammo_", NULL);
+	if (arg && hud) {
+		hud->HandleNamedEvent("ammoPulse");
 	}
-	arg = item->spawnArgs.MatchPrefix( "inv_health", NULL );
-	if ( arg && hud ) {
-		hud->HandleNamedEvent( "healthPulse" );
+	arg = item->spawnArgs.MatchPrefix("inv_health", NULL);
+	if (arg && hud) {
+		hud->HandleNamedEvent("healthPulse");
 	}
-	arg = item->spawnArgs.MatchPrefix( "inv_weapon", NULL );
-	if ( arg && hud ) {
+	arg = item->spawnArgs.MatchPrefix("inv_weapon", NULL);
+	if (arg && hud) {
 		// We need to update the weapon hud manually, but not
 		// the armor/ammo/health because they are updated every
 		// frame no matter what
-		if ( gameLocal.isMultiplayer ) {
-			UpdateHudWeapon( );
-		} else {
-			//so weapon mods highlight the correct weapon when received
-			int weapon = SlotForWeapon ( arg->GetValue() );
-			UpdateHudWeapon( weapon );
+		if (gameLocal.isMultiplayer) {
+			UpdateHudWeapon();
 		}
-		hud->HandleNamedEvent( "weaponPulse" );
+		else {
+			//so weapon mods highlight the correct weapon when received
+			int weapon = SlotForWeapon(arg->GetValue());
+			UpdateHudWeapon(weapon);
+		}
+		hud->HandleNamedEvent("weaponPulse");
 	}
-	arg = item->spawnArgs.MatchPrefix( "inv_armor", NULL );
-	if ( arg && hud ) {
-		hud->HandleNamedEvent( "armorPulse" );
+	arg = item->spawnArgs.MatchPrefix("inv_armor", NULL);
+	if (arg && hud) {
+		hud->HandleNamedEvent("armorPulse");
 	}
+
+	//	GiveDatabaseEntry ( &item->spawnArgs );
+	arg = item->spawnArgs.MatchPrefix("item", NULL);
+
+		// Show the item pickup on the hud
+	if (arg && hud) {
+		idStr langToken = item->spawnArgs.GetString("inv_name");
+		hud->SetStateString("itemtext", common->GetLocalizedString(langToken));
+		hud->SetStateString("itemicon", item->spawnArgs.GetString("inv_icon"));
+		hud->HandleNamedEvent("itemPickup");
+	}
+	//RITUAL BEGIN
 	
-//	GiveDatabaseEntry ( &item->spawnArgs );
-	
-	// Show the item pickup on the hud
-	if ( hud ) {
-		idStr langToken = item->spawnArgs.GetString( "inv_name" );
-		hud->SetStateString ( "itemtext", common->GetLocalizedString( langToken ) );
-		hud->SetStateString ( "itemicon", item->spawnArgs.GetString( "inv_icon" ) );
-		hud->HandleNamedEvent ( "itemPickup" );
-	}
-//RITUAL BEGIN
-	if ( gameLocal.mpGame.IsBuyingAllowedInTheCurrentGameMode() )
-		gameLocal.mpGame.RedrawLocalBuyMenu();
 //RITUAL END
 
 	return gave;
@@ -5333,6 +5353,74 @@ void idPlayer::GiveItem( const char *itemname ) {
 	args.Set( "classname", itemname );
 	args.Set( "owner", name.c_str() );
 	args.Set( "givenToPlayer", va( "%d", entityNumber ) );
+	if (idStr::Icmp(itemname, "item_spoon_bender") == 0 && buyMenuCash >= 10) {
+		inventory.homing = true;
+		buyMenuCash -= 10;
+		hud->SetStateString("popuptext", "Spoon_bender");
+		hud->SetStateFloat("itemtimer", 1000);
+		hud->HandleNamedEvent("itemPickup");
+	}
+	if (idStr::Icmp(itemname, "item_twenty_twenty") == 0 && buyMenuCash >= 15) {
+		inventory.shotCount++;
+		buyMenuCash -= 15;
+		hud->SetStateString("popuptext", "20-20");
+		hud->SetStateFloat("itemtimer", 1000);
+		hud->HandleNamedEvent("itemPickup");
+	}
+	if (idStr::Icmp(itemname, "item_mutant_spider") == 0 && buyMenuCash >= 20) {
+		inventory.shotCount += inventory.shotCount > 1 ? 2 : 3;
+		buyMenuCash -= 20;
+		hud->SetStateString("popuptext", "Mutant_Spider");
+		hud->SetStateFloat("itemtimer", 1000);
+		hud->HandleNamedEvent("itemPickup");
+	}
+	if (idStr::Icmp(itemname, "item_curse_of_the_tower") == 0 && buyMenuCash >= 1) {
+		inventory.throwGrenades = true;
+		buyMenuCash -= 1;
+		hud->SetStateString("popuptext", "Curse_of_the_Tower");
+		hud->SetStateFloat("itemtimer", 1000);
+		hud->HandleNamedEvent("itemPickup");
+	}
+	if (idStr::Icmp(itemname, "item_mantle") == 0 && buyMenuCash >= 5) {
+		inventory.mantle = true;
+		inventory.hasMantle = true;
+		buyMenuCash -= 5;
+		hud->HandleNamedEvent("gained_mantle");
+		hud->SetStateString("popuptext", "Mantle");
+		hud->SetStateFloat("itemtimer", 1000);
+		hud->HandleNamedEvent("itemPickup");
+	}
+	if (idStr::Icmp(itemname, "item_monstrance") == 0 && buyMenuCash >= 5) {
+		inventory.monstrance = true;
+		buyMenuCash -= 5;
+		hud->SetStateString("popuptext", "Monstrance");
+		hud->SetStateFloat("itemtimer", 1000);
+		hud->HandleNamedEvent("itemPickup");
+	}
+	if (idStr::Icmp(itemname, "item_lunch") == 0 && buyMenuCash >= 5) {
+		inventory.maxHealth += 50;
+		buyMenuCash -= 5;
+		if (health < inventory.maxHealth) {
+			health = (health + 50 > inventory.maxHealth ? inventory.maxHealth : health + 50);
+		}
+		hud->SetStateString("popuptext", "Lunch");
+		hud->SetStateFloat("itemtimer", 1000);
+		hud->HandleNamedEvent("itemPickup");
+	}
+	if (idStr::Icmp(itemname, "item_the_belt") == 0 && buyMenuCash >= 5) {
+		buyMenuCash -= 5;
+		inventory.speedBoosts++;
+		hud->SetStateString("popuptext", "The_Belt");
+		hud->SetStateFloat("itemtimer", 1000);
+		hud->HandleNamedEvent("itemPickup");
+	}
+	if (idStr::Icmp(itemname, "item_pyromaniac") == 0 && buyMenuCash >= 20) {
+		inventory.pyromaniac = true;
+		buyMenuCash -= 20;
+		hud->SetStateString("popuptext", "Pyromaniac");
+		hud->SetStateFloat("itemtimer", 1000);
+		hud->HandleNamedEvent("itemPickup");
+	}
 
 	if ( gameLocal.mpGame.IsBuyingAllowedInTheCurrentGameMode() ) {
 		// check if this is a weapon
@@ -8752,7 +8840,7 @@ void idPlayer::AdjustSpeed( void ) {
 		bobFrac = 0.0f;
 	}
 
-	speed *= PowerUpModifier(PMOD_SPEED);
+	speed *= PowerUpModifier(PMOD_SPEED) * (inventory.speedBoosts / 5 + 1);
 
 	if ( influenceActive == INFLUENCE_LEVEL3 ) {
 		speed *= 0.33f;
@@ -9275,6 +9363,31 @@ void idPlayer::LoadDeferredModel( void ) {
 	}
 }
 
+const char* randomStrogg() {
+	const char* monsters[] = { "monster_berserker", "monster_harvester", "monster_grunt", "monster_gladiator" };
+	int size = sizeof(monsters) / sizeof(monsters[0]);
+
+	int randomNum = rand() % size;
+	return monsters[randomNum];
+
+}
+
+bool isSafe(idVec3 spawnpos, idEntity* ent) {
+
+	idBounds bounds;
+	bounds[0] = idVec3(-32, -32, 0);
+	bounds[1] = idVec3(32, 32, 72);   // approximate monster size
+
+	trace_t tr;
+
+	gameLocal.TraceBounds(ent, tr, spawnpos, spawnpos, bounds, 1, NULL);
+
+	if (tr.fraction == 1.0f) {
+		return true;
+	}
+	return false;
+}
+
 /*
 ==============
 idPlayer::Think
@@ -9284,7 +9397,46 @@ Called every tic for each player
 */
 void idPlayer::Think( void ) {
 	renderEntity_t *headRenderEnt;
- 
+	if (mantleBreakTime + 2000 < gameLocal.time) {
+		if (!inventory.mantle && inventory.hasMantle) {
+			inventory.mantle = true;
+			hud->HandleNamedEvent("gained_mantle");
+		}
+
+	}
+	if (g_skill.GetInteger() == 3 && !gameLocal.inGreedMode) {
+		gameLocal.wave = 0;
+		gameLocal.inGreedMode = true;
+		gameLocal.survivingEnemies = 0;
+	}
+	if (gameLocal.inGreedMode && gameLocal.wave < 7) {
+
+		if (gameLocal.survivingEnemies <= 1) {
+			for (int i = 0; i < gameLocal.waveCounts[gameLocal.wave]; i++) {
+				gameLocal.Printf("reamining: %i\n", gameLocal.survivingEnemies);
+				idEntity* spawnEnemy;
+				idDict args;
+				const char* chosenEnemy = randomStrogg();
+				args.Set("classname", chosenEnemy);
+				idVec3 spawnpos = GetPhysics()->GetOrigin() + idVec3(rand() % 100 - 50, rand() % 100 - 50, 100);
+				//int limit = 0;
+				//while(!isSafe(spawnpos, spawnEnemy) && limit < 100) {
+				//	idVec3 spawnpos = GetPhysics()->GetOrigin() + idVec3(rand() % 100 - 50, rand() % 100 - 50, rand() % 10 - 5);
+				//	limit++;
+				//}
+				args.SetVector("velocity", idVec3(0, 0, -200));
+				args.SetVector("origin", spawnpos);
+				bool spawned = gameLocal.SpawnEntityDef(args, &spawnEnemy);
+
+				if (spawned){ 
+					gameLocal.survivingEnemies++;
+					gameLocal.Printf("reamining: %i\n", gameLocal.survivingEnemies);
+
+				}
+			}
+			gameLocal.wave++;
+		}
+	}
 	if ( talkingNPC ) {
 		if ( !talkingNPC.IsValid() ) {
 			talkingNPC = NULL;
@@ -9396,7 +9548,33 @@ void idPlayer::Think( void ) {
 		usercmd.forwardmove = 0;
 		usercmd.rightmove = 0;
 		usercmd.upmove = 0;
+
 	}
+	gameLocal.Printf("button press: %i\n", usercmd.impulse);
+	if (usercmd.impulse == 25 && usercmd.impulse != lastImpulse) {
+
+		if(!inBuyMenu) {
+			gameLocal.Printf("opening buy menu: %s\n", buymenu->Name());
+			buymenu->Activate(true, gameLocal.time);
+			buymenu->HandleNamedEvent("showEverything");
+			buymenu->StateChanged(gameLocal.time);
+			buymenu->SetStateFloat("inmenu", 1);
+			SetFocus(FOCUS_GUI, FOCUS_GUI_TIME, NULL, buymenu);
+			inBuyMenu = true;
+		}
+		else {
+			buymenu->HandleNamedEvent("hideEverything");
+			buymenu->StateChanged(gameLocal.time);
+			buymenu->SetStateFloat("inmenu", 0);
+			inBuyMenu = false;
+		}
+		
+	}
+	if (inBuyMenu) {
+		buymenu->Redraw(gameLocal.time);
+	}
+
+	lastImpulse = usercmd.impulse;
 	
 	// zooming
 	bool zoom = (usercmd.buttons & BUTTON_ZOOM) && CanZoom();
@@ -10058,15 +10236,66 @@ damageDef	an idDict with all the options for damage effects
 inflictor, attacker, dir, and point can be NULL for environmental effects
 ============
 */
-void idPlayer::Damage( idEntity *inflictor, idEntity *attacker, const idVec3 &dir,
-					   const char *damageDefName, const float damageScale, int location ) {
- 	idVec3		kick;
- 	int			damage;
- 	int			armorSave;
- 	int			knockback;
- 	idVec3		damage_from;
- 	float		attackerPushScale;
+void idPlayer::Damage(idEntity* inflictor, idEntity* attacker, const idVec3& dir,
+	const char* damageDefName, const float damageScale, int location) {
+	idVec3		kick;
+	int			damage;
+	int			armorSave;
+	int			knockback;
+	idVec3		damage_from;
+	float		attackerPushScale;
 
+	if (inventory.mantle) {
+		inventory.mantle = false;
+		mantleBreakTime = gameLocal.time;
+		hud->HandleNamedEvent("broke_mantle");
+		return;
+	}
+	const idDict* damageDict = gameLocal.FindEntityDefDict(damageDefName, false);
+	
+	if (inventory.pyromaniac) {
+		
+		if (strcmp(damageDict->GetString("pain"), "concussive") || strcmp(damageDefName, "damage_rocketSplash") == 0 || strcmp(damageDefName, "damage_rocketDirect") == 0 || strcmp(damageDefName, "damage_explosion") == 0 || strcmp(damageDefName, "damage_explodingbarrel") == 0 || strcmp(damageDefName, "damage_Smallexplosion") == 0 || strcmp(damageDefName, "damage_HugeExplosion") == 0) {
+			
+			if (health < inventory.maxHealth) {
+				health = (health + damageDict->GetInt("damage")/4 > inventory.maxHealth ? inventory.maxHealth : health + damageDict->GetInt("damage")/4);
+			}
+			
+			if (!damageDict) {
+				gameLocal.Warning("Unknown damageDef '%s'", damageDefName);
+				return;
+			}
+			return;
+		}
+	}
+	if (damageDict->GetInt("playerIgnore") == 1) { //if its mama mega, dont hurt yourself
+		return;
+	}
+
+	if (inventory.throwGrenades && health > 0 && damage > 0) {
+		idDict args;
+		args.Set("classname", "projectile_grenade");
+		args.SetVector("origin", GetPhysics()->GetOrigin() + idVec3(0, 0, 48));
+
+		for (int i = 0; i < 8; i++) {
+			idEntity* grenade;
+			idVec3 launchDir;
+
+			// Calculate a ring pattern
+			float angle = i * (360.0f / 8.0f);
+			launchDir.x = idMath::Cos(DEG2RAD(angle));
+			launchDir.y = idMath::Sin(DEG2RAD(angle));
+			launchDir.z = 1.0f; // Launching "up"
+
+			if (gameLocal.SpawnEntityDef(args, &grenade)) {
+				idProjectile* proj = static_cast<idProjectile*>(grenade);
+				proj->Create(this, GetPhysics()->GetOrigin(), launchDir);
+				proj->Launch(GetPhysics()->GetOrigin(), launchDir, idVec3(0, 0, 0));
+			}
+		}
+	}
+
+	
 	// RAVEN BEGIN
 	// twhitaker: difficulty levels
 	float modifiedDamageScale = damageScale;

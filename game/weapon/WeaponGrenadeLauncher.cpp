@@ -14,6 +14,7 @@ public:
 	virtual void			Spawn				( void );
 	void					PreSave				( void );
 	void					PostSave			( void );
+	void					autoFire			( void );
 
 #ifdef _XENON
 	virtual bool		AllowAutoAim			( void ) const { return false; }
@@ -145,7 +146,7 @@ stateResult_t rvWeaponGrenadeLauncher::State_Fire ( const stateParms_t& parms ) 
 	switch ( parms.stage ) {
 		case STAGE_INIT:
 			nextAttackTime = gameLocal.time + (fireRate * owner->PowerUpModifier ( PMOD_FIRERATE ));
-			Attack ( false, 30, 100, 0, 1.0f );
+			Attack ( false, owner->inventory.shotCount, 0, 0, 1.0f );
 			PlayAnim ( ANIMCHANNEL_ALL, GetFireAnim(), 0 );	
 			return SRESULT_STAGE ( STAGE_WAIT );
 	
@@ -162,6 +163,7 @@ stateResult_t rvWeaponGrenadeLauncher::State_Fire ( const stateParms_t& parms ) 
 	}
 	return SRESULT_ERROR;
 }
+
 
 /*
 ================

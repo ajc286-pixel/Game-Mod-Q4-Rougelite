@@ -14,7 +14,7 @@ public:
 	virtual void			Spawn				( void );
 	void					PreSave				( void );
 	void					PostSave			( void );
-
+	void				autoFire();
 #ifdef _XENON
 	virtual bool		AllowAutoAim			( void ) const { return false; }
 #endif
@@ -24,11 +24,13 @@ private:
 	stateResult_t		State_Idle		( const stateParms_t& parms );
 	stateResult_t		State_Fire		( const stateParms_t& parms );
 	stateResult_t		State_Reload	( const stateParms_t& parms );
+	
 
 	const char*			GetFireAnim() const { return (!AmmoInClip()) ? "fire_empty" : "fire"; }
 	const char*			GetIdleAnim() const { return (!AmmoInClip()) ? "idle_empty" : "idle"; }
 	
 	CLASS_STATES_PROTOTYPE ( rvWeaponGrenadeLauncher );
+	stateResult_t State_Autofire(const stateParms_t& parms);
 };
 
 CLASS_DECLARATION( rvWeapon, rvWeaponGrenadeLauncher )

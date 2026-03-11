@@ -2907,7 +2907,19 @@ void Cmd_ListInstances_f( const idCmdArgs& args ) {
 		}
 	}
 }
+void Cmd_Reset_Impulse(const idCmdArgs& args) {
+	idPlayer* player = gameLocal.GetLocalPlayer();
+	gameLocal.Printf("button press: %i\n", player->usercmd.impulse);
 
+	player->PerformImpulse(24);
+	gameLocal.Printf("button press: %i\n", player->usercmd.impulse);
+
+	return;
+}
+void Cmd_Toggle_Buy_Menu(const idCmdArgs& args) {
+	idPlayer* player = gameLocal.GetLocalPlayer();
+	player->inBuyMenu = !player->inBuyMenu;
+}
 void Cmd_AddIcon_f( const idCmdArgs& args ) {
 	if ( args.Argc() <= 1 ) {
 		common->Printf( "usage: addIcon <client>\n" );
@@ -3231,6 +3243,8 @@ void idGameLocal::InitConsoleCommands( void ) {
 // squirrel: Mode-agnostic buymenus
 	cmdSystem->AddCommand( "buyMenu",				Cmd_ToggleBuyMenu_f,		CMD_FL_GAME,				"Toggle buy menu (if in a buy zone and the game type supports it)" );
 	cmdSystem->AddCommand( "buy",					Cmd_BuyItem_f,				CMD_FL_GAME,				"Buy an item (if in a buy zone and the game type supports it)" );
+	cmdSystem->AddCommand( "refreshImpulse",		Cmd_Reset_Impulse,			CMD_FL_GAME,				"Reset the current impulse");
+	cmdSystem->AddCommand( "toggleBuyMenu",			Cmd_Toggle_Buy_Menu,		CMD_FL_GAME,				"Open buy menu");
 // RITUAL END
 
 }
