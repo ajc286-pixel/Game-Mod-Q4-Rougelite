@@ -431,6 +431,7 @@ public:
 	virtual void			Hide( void );
 	virtual void			Show( void );
 
+
 	void					Init( void );
  	void					PrepareForRestart( void );
  	virtual void			Restart( void );

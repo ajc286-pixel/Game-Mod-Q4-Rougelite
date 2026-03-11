@@ -591,7 +591,80 @@ bool idItem::GiveToPlayer( idPlayer *player ) {
 	if ( spawnArgs.GetBool( "inv_carry" ) ) {
 		return player->GiveInventoryItem( &spawnArgs );
 	} 
-	
+	if (spawnArgs.GetString("inv_give", "fail") != "fail") {
+		
+		const char* str = spawnArgs.GetString("inv_give");
+		gameLocal.Printf("Picked up item: '%s'\n", str);
+		if (strcmp(str, "#str_108025")) {//not implemented
+			player->inventory.homing = true;
+			player->hud->SetStateString("popuptext", "Spoon_bender");
+		}
+		if (strcmp(str, "#str_108026") == 0) {
+			player->inventory.shotCount ++;
+			player->hud->SetStateString("popuptext", "20-20");
+		}
+		if (strcmp(str, "#str_108027") == 0) {
+			player->inventory.shotCount += player->inventory.shotCount > 1 ? 2 : 3;
+			player->hud->SetStateString("popuptext", "Mutant_Spider");
+		}
+		if (strcmp(str, "#str_108028") == 0) {
+			player->inventory.throwGrenades = true;
+			player->hud->SetStateString("popuptext", "Curse_of_the_Tower");
+		}
+		if (strcmp(str, "#str_108029") == 0) { //kinda ugly and weak but works
+			player->inventory.mantle = true;
+			player->inventory.hasMantle = true;
+			player->hud->HandleNamedEvent("gained_mantle");
+			player->hud->SetStateString("popuptext", "Mantle");
+		}
+		if (strcmp(str, "#str_108030") == 0) { //visual cue?
+			player->inventory.monstrance = true;
+			player->hud->SetStateString("popuptext", "Monstrance");
+		}
+		if (strcmp(str, "#str_108031") == 0) {
+			player->inventory.maxHealth += 50;
+			if (player->health < player->inventory.maxHealth) {
+				player->health = (player->health + 50 > player->inventory.maxHealth ? player->inventory.maxHealth : player->health + 50);
+			}
+			player->hud->SetStateString("popuptext", "Lunch");
+		}
+		if (strcmp(str, "#str_108032") == 0) {
+			player->inventory.speedBoosts++;
+			player->hud->SetStateString("popuptext", "The_Belt");
+		}
+		if (strcmp(str, "#str_108033") == 0) {//not implemented
+			player->inventory.pyromaniac = true;
+			player->hud->SetStateString("popuptext", "Pyromaniac");
+		}
+		player->hud->SetStateFloat("itemtimer", 1000);
+		player->hud->HandleNamedEvent("itemPickup");
+
+		GetPhysics()->SetContents(0);
+
+		// hide the model, or switch to the pickup skin
+		if (pickupSkin) {
+			SetSkin(pickupSkin);
+			srvReady = 0;
+		}
+		else {
+			Hide();
+			BecomeInactive(TH_THINK);
+		}
+
+		pickedUp = true;
+
+		// allow SetSkin or Hide() to get called regardless of simpleitem mode
+		if (simpleItem) {
+			FreeModelDef();
+			UpdateVisuals();
+		}
+
+		// remove the highlight shell
+		if (itemShellHandle != -1) {
+			gameRenderWorld->FreeEntityDef(itemShellHandle);
+			itemShellHandle = -1;
+		}
+	}
 	// Handle the special ammo pickup that gives ammo for the weapon the player currently has
 	if ( spawnArgs.GetBool( "item_currentWeaponAmmo" ) ) {
 		const char *ammoName = player->weapon->GetAmmoNameForIndex(player->weapon->GetAmmoType());

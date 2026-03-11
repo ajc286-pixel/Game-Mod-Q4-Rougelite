@@ -636,10 +636,14 @@ bool idProjectile::Collide( const trace_t &collision, const idVec3 &velocity, bo
  	
  	hitTeleporter = false;
 
+
+
 	if ( state == EXPLODED || state == FIZZLED ) {
 		return true;
 	}
 
+
+	
 	// allow projectiles to hit triggers (teleports)
 	// predict this on a client
 	if( collision.c.contents & CONTENTS_TRIGGER ) {
@@ -695,7 +699,7 @@ bool idProjectile::Collide( const trace_t &collision, const idVec3 &velocity, bo
 			return false;
 		}
 	}
-
+	
 	// don't predict collisions on projectiles that need their physics synced (e.g. grenades)
 	if ( gameLocal.isClient && (!g_clientProjectileCollision.GetBool() || syncPhysics) ) {
 		// optionally do not try to predict detonates, that causes projectiles disappearing
@@ -718,6 +722,17 @@ bool idProjectile::Collide( const trace_t &collision, const idVec3 &velocity, bo
 	if ( ent == owner.GetEntity() ) {
 		// assert( 0 );		// twhitaker: this isn't necessary
 		return true;
+	}
+	if ((idStr::Cmp(spawnArgs.GetString("classname"), "projectile_grenade") == 0 ||
+		idStr::Cmp(spawnArgs.GetString("classname"), "projectile_grenade_homing") == 0) && ent->IsType(idAI::GetClassType())) {
+		ent->poison = 50;
+	}
+	if ((idStr::Cmp(spawnArgs.GetString("classname"), "projectile_railgun") == 0 ||
+		idStr::Cmp(spawnArgs.GetString("classname"), "projectile_railgun_homing") == 0) && ent->IsType(idAI::GetClassType())) {
+		gameLocal.GetLocalPlayer()->inventory.deadEyeMult++;
+	}
+	else {
+		gameLocal.GetLocalPlayer()->inventory.deadEyeMult = 1;
 	}
 
  	// just get rid of the projectile when it hits a player in noclip
@@ -761,10 +776,26 @@ bool idProjectile::Collide( const trace_t &collision, const idVec3 &velocity, bo
  
 	//Spawn any impact entities if necessary.
 	SpawnImpactEntities(collision, velocity);
-	if (idStr::Cmp(spawnArgs.GetString("classname"), "projectile_rocket") == 0) {
-		gameLocal.Printf("passed");
-		SpawnBulletEntities(collision, velocity);
+	if (idStr::Cmp(spawnArgs.GetString("classname"), "projectile_rocket") == 0 || idStr::Cmp(spawnArgs.GetString("classname"), "projectile_rocket_homing") == 0) {
+		SpawnBulletEntities(collision, velocity, "projectile_blaster");
 
+	}
+	if ((idStr::Cmp(spawnArgs.GetString("classname"), "projectile_nail") == 0 || 
+		idStr::Cmp(spawnArgs.GetString("classname"), "projectile_nail_homing") == 0) && 
+		!spawnArgs.GetBool("spawnedbybullet")) {
+		SpawnBulletEntities(collision, velocity, "projectile_nail");
+	}
+	if (idStr::Cmp(spawnArgs.GetString("classname"), "projectile_dmg") == 0) {
+
+		renderEntity_t* renderEnt = GetRenderEntity();
+		damagePower *= 0.4f;
+		if (scaleTracker > 0.1f) {
+			renderEnt->shaderParms[SHADERPARM_MD5_SKINSCALE] = 0.4f;
+			renderEnt->axis *= 0.4f;
+			scaleTracker *= 0.4f;
+		}
+		
+		UpdateVisuals();
 	}
 	//Apply any impact force if the necessary
 	//ApplyImpactForce(ent, collision, dir);
@@ -775,7 +806,7 @@ bool idProjectile::Collide( const trace_t &collision, const idVec3 &velocity, bo
 	}
 
 	// If the projectile hits water then we need to let the projectile keep going
-	if ( ent->GetPhysics()->GetContents() & CONTENTS_WATER ) {
+	if ( ent->GetPhysics()->GetContents() & CONTENTS_WATER /* || idStr::Cmp(spawnArgs.GetString("classname"), "projectile_dmg") == 0*/) {
 		if ( !physicsObj.IsInWater( ) ) {
 			StopEffect( "fx_fly" );
 			if( flyEffect)	{
@@ -785,7 +816,7 @@ bool idProjectile::Collide( const trace_t &collision, const idVec3 &velocity, bo
 		// Pass through water
 		return false;
 	} else if ( canDamage && ent->IsType( idActor::GetClassType() ) ) {
-		if ( !projectileFlags.detonate_on_actor ) {
+		if ( !projectileFlags.detonate_on_actor || idStr::Cmp(spawnArgs.GetString("classname"), "projectile_dmg") == 0) {
 			return false;
 		}
 	} else {
@@ -1013,9 +1044,9 @@ void idProjectile::SpawnImpactEntities(const trace_t& collision, const idVec3 ve
 	}
 }
 
-void idProjectile::SpawnBulletEntities(const trace_t& collision, const idVec3 velocity)
+void idProjectile::SpawnBulletEntities(const trace_t& collision, const idVec3 velocity, const char* name = "projectile_blaster")
 {
-	const idDict* bulletEntityDict = gameLocal.FindEntityDefDict("projectile_blaster");
+	const idDict* bulletEntityDict = gameLocal.FindEntityDefDict(name);
 	const int numProjectiles = 30;
 
 	if (bulletEntityDict == NULL)
@@ -1061,9 +1092,11 @@ void idProjectile::SpawnBulletEntities(const trace_t& collision, const idVec3 ve
 	origin += 10.0f * collision.c.normal;
 	for (int i = 0; i < numProjectiles; i++)
 	{
-
+		
 		idProjectile* spawnProjectile = NULL;
 		gameLocal.SpawnEntityDef(*bulletEntityDict, (idEntity**)&spawnProjectile);
+		spawnProjectile->spawnArgs.SetBool("spawnedbybullet", true);
+
 		if (spawnProjectile != NULL)
 		{
 			int pitch = rvRandom::irand(ieMinPitch, ieMaxPitch);
@@ -1082,7 +1115,7 @@ void idProjectile::SpawnBulletEntities(const trace_t& collision, const idVec3 ve
 
 			//Now orient the direction to the surface world orientation.
 			direction = impactAxes * tempDirection;
-			spawnProjectile->Launch(origin, direction, reflectionVelocity);
+			spawnProjectile->Launch(origin, direction, reflectionVelocity, 0.0f, 1.0f);
 		}
 	}
 }

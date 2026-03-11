@@ -48,6 +48,7 @@ idAI::idAI ( void ) {
 	aasSensor				= NULL;
 	aasFind					= NULL;
 
+	droppedItem				= false;
 	lastHitCheckResult		= false;
 	lastHitCheckTime		= 0;
 	lastAttackTime			= 0;
@@ -1136,12 +1137,24 @@ idAI::Think
 =====================
 */
 void idAI::Think( void ) {
-
+	if (poison >= 1) {
+		poison--;
+		health--;
+	}
 	// if we are completely closed off from the player, don't do anything at all
 	if ( CheckDormant() ) {
 		return;
 	}
-
+	if (gameLocal.GetLocalPlayer()->inventory.monstrance && team == AITEAM_STROGG) {
+		float dir = GetPhysics()->GetOrigin().Dist(gameLocal.GetLocalPlayer()->GetPhysics()->GetOrigin());
+		if (dir <= 120) {
+			health -= 3;
+			if (health < 0) {
+				Killed(gameLocal.GetLocalPlayer(), gameLocal.GetLocalPlayer(), 5, idVec3(0, 0, 0), 0);
+			}
+		}
+		
+	}
 	// Simple think this frame?
 	aifl.simpleThink = aiManager.IsSimpleThink ( this );
 
@@ -1603,7 +1616,14 @@ bool idAI::Pain( idEntity *inflictor, idEntity *attacker, int damage, const idVe
 
 	return aifl.pain;
 }
-
+const char* randomItem(void) {
+	
+	const char* items[] = { "item_spoonbender", "item_twentytwenty", "item_mutantspider", "item_curseofthetower", "item_holymantle", "item_monstrance", "item_lunch", "item_thebelt", "item_pyromaniac"};
+	int size = sizeof(items) / sizeof(items[0]);
+	
+	int randomNum = rand() % size;
+	return items[randomNum];
+}
 /*
 =====================
 idAI::Killed
@@ -1618,7 +1638,25 @@ void idAI::Killed( idEntity *inflictor, idEntity *attacker, int damage, const id
 		gameLocal.Printf( "Damage: joint: '%s', zone '%s'\n", animator.GetJointName( ( jointHandle_t )location ), 
 			GetDamageGroup( location ) );
 	}
+	if (gameLocal.inGreedMode) {
+		gameLocal.survivingEnemies--;
+	}
+	if (!droppedItem) {
+		idEntity* spawnItem;
+		idDict args;
+		const char* chosenItem = randomItem();
+		args.Set("classname", chosenItem);
+		args.SetVector("origin", GetPhysics()->GetOrigin() + idVec3(0, 0, 48));
+		gameLocal.SpawnEntityDef(args, &spawnItem);
+		gameLocal.GetLocalPlayer()->buyMenuCash++;
 
+		//if (gameLocal.SpawnEntityDef(args, &spawnItem)) {
+		//	idItem* item = static_cast<idItem*>(spawnItem);
+
+		//}
+		gameLocal.GetLocalPlayer()->hud->SetStateFloat("field_credits", gameLocal.GetLocalPlayer()->buyMenuCash);
+		droppedItem = true;
+	}
 	if ( aifl.dead ) {
 		aifl.pain = true;
 		aifl.damage = true;

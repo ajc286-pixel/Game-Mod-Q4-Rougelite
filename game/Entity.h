@@ -111,6 +111,8 @@ class idEntity : public idClass {
 public:
 	static const int		MAX_PVS_AREAS = 4;
 
+
+	int						poison;
 	int						entityNumber;			// index into the entity list
 	int						entityDefNumber;		// index into the entity def list
 

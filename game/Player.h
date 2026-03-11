@@ -201,12 +201,23 @@ public:
 	int						carryOverWeapons;
 // RITUAL END
 	int						powerups;
+
+	int						deadEyeMult = 1;
 	int						armor;
 	int						maxarmor;
 	int						ammo[ MAX_AMMO ];
 	int						clip[ MAX_WEAPONS ];
 	int						powerupEndTime[ POWERUP_MAX ];
 	int						weaponMods[ MAX_WEAPONS ];
+
+	bool					homing = false;
+	int						shotCount = 1;
+	bool					throwGrenades = false;
+	bool					mantle = false;
+	bool					hasMantle = false;
+	bool					monstrance = false;
+	bool					pyromaniac = false;
+	int						speedBoosts = 0;
 
  	// multiplayer
  	int						ammoPredictTime;
@@ -337,7 +348,9 @@ public:
 	idEntityPtr<idAnimatedEntity>	weaponWorldModel;
 	const idDeclEntityDef*			weaponDef;
 
-
+	bool					inBuyMenu = false;
+	int						lastImpulse;
+	idUserInterface *		buymenu;
  	idUserInterface *		hud;				// Common hud
 	idUserInterface *		mphud;				// hud overlay containing MP elements
 	

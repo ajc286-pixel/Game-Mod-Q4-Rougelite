@@ -350,7 +350,11 @@ public:
 	
 	int							entityRegisterTime;
 // RAVEN END
-
+	int							wave;
+	int							waveCounts[7] = {2, 3, 4, 5, 7, 9, 10};
+	bool						inGreedMode = false;
+	int							survivingEnemies;
+	
 	// can be used to automatically effect every material in the world that references globalParms
 	float					globalShaderParms[ MAX_GLOBAL_SHADER_PARMS ];	
 

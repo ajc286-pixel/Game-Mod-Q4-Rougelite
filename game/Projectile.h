@@ -67,10 +67,8 @@ public :
 	
 protected:
 	void					SpawnImpactEntities(const trace_t& collision, const idVec3 projectileDirection);
-
-	void					SpawnBulletEntities(const trace_t& collision, const idVec3 velocity);
-
-
+	void					SpawnBulletEntities(const trace_t& collision, const idVec3 velocity, const char* name);
+	float						scaleTracker = 1.0f;
 	idEntityPtr<idEntity>	owner;
 
 	struct projectileFlags_s {
