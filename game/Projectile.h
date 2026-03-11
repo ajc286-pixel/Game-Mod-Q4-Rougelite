@@ -68,6 +68,8 @@ public :
 protected:
 	void					SpawnImpactEntities(const trace_t& collision, const idVec3 projectileDirection);
 
+	void					SpawnBulletEntities(const trace_t& collision, const idVec3 velocity);
+
 
 	idEntityPtr<idEntity>	owner;
 
